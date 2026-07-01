@@ -1,0 +1,183 @@
+// AFIN data model. SQLite, so roles/statuses are stored as strings (no native enums).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  name         String
+  passwordHash String
+  locale       String    @default("ar")
+  failedLogins Int       @default(0)
+  lockedUntil  DateTime?
+  createdAt    DateTime  @default(now())
+
+  memberships Membership[]
+  submissions Submission[]
+  auditLogs   AuditLog[]
+}
+
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+
+  memberships Membership[]
+  projects    Project[]
+  invites     Invite[]
+  settings    Setting[]
+  auditLogs   AuditLog[]
+}
+
+// role: owner | admin | editor | collector | viewer
+model Membership {
+  id     String @id @default(cuid())
+  role   String @default("viewer")
+  userId String
+  orgId  String
+
+  user User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  org  Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, orgId])
+  @@index([orgId])
+}
+
+model Project {
+  id          String   @id @default(cuid())
+  name        String
+  description String   @default("")
+  color       String   @default("#059669")
+  orgId       String
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  org   Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  forms Form[]
+
+  @@index([orgId])
+}
+
+// status: draft | deployed | closed
+model Form {
+  id             String   @id @default(cuid())
+  title          String
+  titleEn        String   @default("")
+  description    String   @default("")
+  status         String   @default("draft")
+  shareToken     String   @unique
+  schemaJson     String   @default("{\"fields\":[]}")
+  version        Int      @default(1)
+  allowAnonymous Boolean  @default(true)
+  requireGeo     Boolean  @default(false)
+  // End-to-end encryption. When enabled, submissions are encrypted in the browser with
+  // publicKey; privKeyEnc is the RSA private key wrapped under the owner's passphrase
+  // (PBKDF2 + AES-GCM) which the server never sees in plaintext.
+  encrypted      Boolean  @default(false)
+  publicKey      String   @default("")
+  privKeyEnc     String   @default("")
+  keySalt        String   @default("")
+  keyIv          String   @default("")
+  projectId      String
+  createdById    String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  project     Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  versions    FormVersion[]
+  submissions Submission[]
+
+  @@index([projectId])
+}
+
+model FormVersion {
+  id          String   @id @default(cuid())
+  formId      String
+  version     Int
+  schemaJson  String
+  createdById String
+  createdAt   DateTime @default(now())
+
+  form Form @relation(fields: [formId], references: [id], onDelete: Cascade)
+
+  @@unique([formId, version])
+}
+
+// status: complete | draft
+model Submission {
+  id            String   @id @default(cuid())
+  formId        String
+  formVersion   Int      @default(1)
+  dataJson      String
+  // For encrypted submissions dataJson is empty; the AES-GCM payload lives in encData,
+  // its IV in encIv, and the AES key (RSA-OAEP wrapped to the form's public key) in encKey.
+  encrypted     Boolean  @default(false)
+  encKey        String   @default("")
+  encIv         String   @default("")
+  encData       String   @default("")
+  geoLat        Float?
+  geoLng        Float?
+  status        String   @default("complete")
+  deviceId      String   @default("")
+  clientId      String   @default("")
+  submittedById String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  form        Form  @relation(fields: [formId], references: [id], onDelete: Cascade)
+  submittedBy User? @relation(fields: [submittedById], references: [id])
+
+  @@index([formId])
+  @@index([clientId])
+}
+
+model Invite {
+  id         String    @id @default(cuid())
+  orgId      String
+  email      String
+  role       String    @default("collector")
+  token      String    @unique
+  acceptedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@index([orgId])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  orgId      String
+  userId     String?
+  action     String
+  entityType String
+  entityId   String   @default("")
+  metaJson   String   @default("{}")
+  createdAt  DateTime @default(now())
+
+  org  Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  user User?        @relation(fields: [userId], references: [id])
+
+  @@index([orgId])
+}
+
+// Per-org key/value store (AI provider config, branding, etc.)
+model Setting {
+  id    String @id @default(cuid())
+  orgId String
+  key   String
+  value String @default("")
+
+  org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@unique([orgId, key])
+}
