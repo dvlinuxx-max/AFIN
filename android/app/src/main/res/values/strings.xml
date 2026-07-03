@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">AFIN</string>
+    <string name="action_refresh">تحديث</string>
+    <string name="action_server">تغيير الخادم</string>
+    <string name="action_about">حول التطبيق</string>
+    <string name="server_title">عنوان الخادم</string>
+    <string name="server_hint">https://example.com</string>
+    <string name="server_message">أدخل عنوان خادم AFIN الذي تتصل به مؤسستك.</string>
+    <string name="save">حفظ</string>
+    <string name="cancel">إلغاء</string>
+    <string name="error_title">تعذّر الاتصال</string>
+    <string name="error_message">تحقّق من عنوان الخادم واتصال الإنترنت ثم أعد المحاولة.</string>
+    <string name="retry">إعادة المحاولة</string>
+    <string name="change_server">تغيير الخادم</string>
+    <string name="choose_file">اختر ملفاً</string>
+    <string name="downloading">جارٍ التنزيل…</string>
+    <string name="download_failed">تعذّر تنزيل الملف</string>
+    <string name="invalid_url">عنوان غير صالح</string>
+    <string name="about_message">AFIN — تطبيق جمع البيانات الميدانية.\n\nيتصل بخادم مؤسستك للعمل في الميدان مع دعم الوضع دون اتصال، والتقاط الصور والموقع ورفع الملفات.</string>
+</resources>
